@@ -9,9 +9,23 @@
         <div class="mb-4">
           <h5>Order Summary</h5>
           {% for row in rows %}
-            <div class="d-flex justify-content-between small text-muted mb-2">
-              <span>{{ row.product_name }} ({{ row.quantity }})</span>
-              <span>{{ row.amount | currency }}</span>
+            <div class="d-flex justify-content-between align-items-center small text-muted mb-3">
+              <div>
+                <div class="fw-semibold text-dark">{{ row.product_name }}</div>
+                <div>{{ (row.amount / row.quantity) | currency }} per {{ row.unit }}</div>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <form method="post" action="{{ url_for('update_payment_quantity', order_reference=order_reference, product_id=row.product_id) }}">
+                  <input type="hidden" name="change" value="-1">
+                  <button class="btn btn-outline-secondary btn-sm" type="submit" aria-label="Decrease {{ row.product_name }} quantity">-</button>
+                </form>
+                <span class="text-dark">{{ row.quantity }} {{ row.unit }}</span>
+                <form method="post" action="{{ url_for('update_payment_quantity', order_reference=order_reference, product_id=row.product_id) }}">
+                  <input type="hidden" name="change" value="1">
+                  <button class="btn btn-outline-secondary btn-sm" type="submit" aria-label="Increase {{ row.product_name }} quantity">+</button>
+                </form>
+                <span class="text-dark fw-semibold">{{ row.amount | currency }}</span>
+              </div>
             </div>
           {% endfor %}
           <hr>

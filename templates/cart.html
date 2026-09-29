@@ -16,7 +16,7 @@
               <div class="col-md-4 px-3">
                 <h5 class="fw-bold">{{ product.name }}</h5>
                 <p class="mb-1 text-muted">{{ product.shop_name }}</p>
-                <p class="mb-0 text-success fw-semibold">{{ product.price | currency }}</p>
+                <p class="mb-0 text-success fw-semibold">{{ product.price | currency }} / {{ product.unit }}</p>
               </div>
               <div class="col-md-3">
                 <form method="post" action="{{ url_for('update_cart', product_id=product.id) }}" class="d-flex align-items-center gap-2">

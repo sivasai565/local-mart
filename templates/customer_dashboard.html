@@ -5,9 +5,15 @@
   <div class="row mb-4">
     <div class="col-12">
       <div class="card border-0 shadow-sm rounded-4 p-3 dashboard-search">
-        <form method="get" class="d-flex align-items-center gap-2">
+        <form method="get" class="d-flex align-items-center gap-2 flex-wrap">
           <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
           <input type="text" name="q" value="{{ q }}" class="form-control form-control-lg" placeholder="Search for rice, biscuits, soap, milk, medicines, vegetables, stationery...">
+          <select class="form-select form-select-lg" name="category" aria-label="Filter by category">
+            <option value="">All categories</option>
+            {% for category_option in categories %}
+              <option value="{{ category_option }}" {% if category == category_option %}selected{% endif %}>{{ category_option }}</option>
+            {% endfor %}
+          </select>
           <button class="btn btn-success btn-lg" type="submit">Search</button>
         </form>
       </div>
@@ -27,7 +33,7 @@
             <p class="small text-muted mb-2">Brand: {{ product.brand }} • Manufacturer: {{ product.manufacturer }}</p>
             <p class="text-muted small mb-2"><strong>Shop:</strong> {{ product.shop_name }}</p>
             <div class="d-flex justify-content-between align-items-center text-success fw-bold mb-2">
-              <span>{{ product.price | currency }}</span>
+              <span>{{ product.price | currency }} / {{ product.unit }}</span>
               {% if product.available_stock <= 0 %}
                 <span class="badge bg-secondary">Out of Stock</span>
               {% elif product.available_stock <= product.low_stock_threshold %}

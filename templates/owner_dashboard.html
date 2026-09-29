@@ -44,7 +44,7 @@
             <tr>
               <td>{{ product.name }}</td>
               <td>{{ product.category }}</td>
-              <td>{{ product.price | currency }}</td>
+              <td>{{ product.price | currency }} / {{ product.unit }}</td>
               <td>{{ product.available_stock }}</td>
               <td>
                 {% if product.available_stock <= 0 %}

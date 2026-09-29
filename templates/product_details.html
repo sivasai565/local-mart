@@ -11,7 +11,7 @@
         <span class="badge bg-success-subtle text-success mb-2">{{ product.category }}</span>
         <h2 class="fw-bold">{{ product.name }}</h2>
         <p class="text-muted mb-3">Manufacturer: {{ product.manufacturer }} | Brand: {{ product.brand }}</p>
-        <h3 class="text-success fw-bold">{{ product.price | currency }}</h3>
+        <h3 class="text-success fw-bold">{{ product.price | currency }} <small class="fs-6">per {{ product.unit }}</small></h3>
         <p class="text-dark mt-3">{{ product.description }}</p>
         <ul class="product-meta mt-3">
           <li>Shop: {{ product.shop_name }}</li>

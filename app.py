@@ -39,6 +39,43 @@ app.config["UPLOAD_FOLDER"] = os.path.join(
     "uploads"
 )
 
+PRODUCT_CATEGORIES = [
+    "Milk",
+    "Curd & Yogurt",
+    "Butter & Cheese",
+    "Sweets & Desserts",
+    "Ice Creams",
+    "Bakery",
+    "Rice & Grains",
+    "Flour & Pulses",
+    "Oils & Ghee",
+    "Spices & Masalas",
+    "Fresh Vegetables",
+    "Fresh Fruits",
+    "Eggs",
+    "Meat, Poultry & Seafood",
+    "Snacks",
+    "Biscuits & Cookies",
+    "Chocolates & Candy",
+    "Breakfast & Cereals",
+    "Packaged & Instant Foods",
+    "Beverages",
+    "Tea & Coffee",
+    "Water",
+    "Frozen Foods",
+    "Personal Care",
+    "Baby Care",
+    "Health & Medicines",
+    "Household Cleaning",
+    "Home & Kitchen",
+    "Stationery",
+    "Pet Supplies",
+    "Puja & Festival Items",
+    "Agricultural Products",
+    "Local & Organic Products",
+    "Other",
+]
+
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
 
@@ -176,6 +213,7 @@ def init_db():
             description TEXT,
             image TEXT,
             price REAL NOT NULL,
+            unit TEXT NOT NULL DEFAULT 'piece',
             original_stock INTEGER NOT NULL,
             available_stock INTEGER NOT NULL,
             sold_quantity INTEGER DEFAULT 0,
@@ -234,7 +272,25 @@ def init_db():
     conn.close()
 
     ensure_shop_payment_columns()
+    ensure_product_unit_column()
     seed_demo_data()
+
+
+def ensure_product_unit_column():
+
+    conn = get_db()
+    columns = conn.execute(
+        "PRAGMA table_info(products)"
+    ).fetchall()
+    existing = {column[1] for column in columns}
+
+    if "unit" not in existing:
+        conn.execute(
+            "ALTER TABLE products ADD COLUMN unit TEXT NOT NULL DEFAULT 'piece'"
+        )
+
+    conn.commit()
+    conn.close()
 
 
 # ============================================================
@@ -1036,6 +1092,7 @@ def build_order_summary(order_reference):
             p.manufacturer,
             p.manufacturing_date,
             p.expiry_date,
+            p.unit,
 
             c.name AS customer_name,
             c.mobile AS customer_mobile,
@@ -1874,6 +1931,7 @@ def customer_dashboard():
         products=products,
         q=query,
         category=category,
+        categories=PRODUCT_CATEGORIES,
         brand=brand,
         shop=shop
     )
@@ -2424,6 +2482,19 @@ def payment_page(order_reference):
         order_reference
     )
 
+    if rows and any(
+        row["customer_id"] != session["user_id"]
+        for row in rows
+    ):
+        flash(
+            "You cannot access this payment page.",
+            "error"
+        )
+
+        return redirect(
+            url_for("customer_dashboard")
+        )
+
     if not rows:
 
         flash(
@@ -2451,6 +2522,91 @@ def payment_page(order_reference):
         total_amount=total_amount,
         customer=customer,
         order_reference=order_reference
+    )
+
+
+@app.route(
+    "/payment/<order_reference>/quantity/<int:product_id>",
+    methods=["POST"]
+)
+def update_payment_quantity(order_reference, product_id):
+
+    if not ensure_logged_in("customer"):
+        return redirect(
+            url_for("customer_login")
+        )
+
+    try:
+        change = int(request.form.get("change", "0"))
+    except (TypeError, ValueError):
+        change = 0
+
+    if change not in (-1, 1):
+        flash("Invalid quantity change.", "error")
+        return redirect(url_for("payment_page", order_reference=order_reference))
+
+    conn = get_db()
+
+    try:
+        order = conn.execute(
+            """
+            SELECT o.id, o.quantity, o.customer_id, o.payment_status,
+                   p.price, p.available_stock, p.name
+            FROM orders o
+            INNER JOIN products p ON p.id = o.product_id
+            WHERE o.order_reference = ? AND o.product_id = ?
+            ORDER BY o.id ASC
+            LIMIT 1
+            """,
+            (order_reference, product_id)
+        ).fetchone()
+
+        if not order or order["customer_id"] != session["user_id"]:
+            flash("Order item not found.", "error")
+        elif order["payment_status"] != "Pending":
+            flash("This order can no longer be changed.", "error")
+        else:
+            updated_quantity = order["quantity"] + change
+
+            if updated_quantity < 1:
+                flash("Quantity cannot be less than one.", "error")
+            elif updated_quantity > order["available_stock"]:
+                flash(f"Only {order['available_stock']} units of {order['name']} are available.", "error")
+            else:
+                conn.execute(
+                    "UPDATE orders SET quantity = ?, amount = ? WHERE id = ?",
+                    (
+                        updated_quantity,
+                        round(float(order["price"]) * updated_quantity, 2),
+                        order["id"],
+                    )
+                )
+
+                pending_total = conn.execute(
+                    "SELECT COALESCE(SUM(amount), 0) FROM orders WHERE order_reference = ?",
+                    (order_reference,)
+                ).fetchone()[0]
+                conn.execute(
+                    "DELETE FROM payments WHERE order_reference = ? AND payment_status = 'Pending'",
+                    (order_reference,)
+                )
+                conn.execute(
+                    """
+                    INSERT INTO payments (order_reference, payment_method, amount, payment_status)
+                    VALUES (?, 'COD', ?, 'Pending')
+                    """,
+                    (order_reference, pending_total)
+                )
+                conn.commit()
+                flash("Order quantity and total updated.", "success")
+    except sqlite3.Error:
+        conn.rollback()
+        flash("Could not update the order quantity.", "error")
+    finally:
+        conn.close()
+
+    return redirect(
+        url_for("payment_page", order_reference=order_reference)
     )
 
 
@@ -3394,6 +3550,8 @@ def edit_product(product_id):
                 )
             )
 
+            unit = request.form.get("unit", "piece").strip()
+
             original_stock = int(
                 request.form.get(
                     "original_stock",
@@ -3495,6 +3653,7 @@ def edit_product(product_id):
                     description = ?,
                     image = ?,
                     price = ?,
+                    unit = ?,
                     original_stock = ?,
                     available_stock = ?,
                     manufacturing_date = ?,
@@ -3514,6 +3673,7 @@ def edit_product(product_id):
                     description,
                     image_path,
                     price,
+                    unit,
                     original_stock,
                     available_stock,
                     manufacturing_date,
@@ -3555,6 +3715,7 @@ def edit_product(product_id):
         "add_product.html",
         shop=shop,
         product=product,
+        categories=PRODUCT_CATEGORIES,
         edit_mode=True
     )
 
@@ -3625,6 +3786,8 @@ def add_product():
                 )
             )
 
+            unit = request.form.get("unit", "piece").strip()
+
             original_stock = int(
                 request.form.get(
                     "original_stock",
@@ -3690,7 +3853,8 @@ def add_product():
 
                 return render_template(
                     "add_product.html",
-                    shop=shop
+                    shop=shop,
+                    categories=PRODUCT_CATEGORIES
                 )
 
             image_path = (
@@ -3744,6 +3908,7 @@ def add_product():
                     description,
                     image,
                     price,
+                    unit,
                     original_stock,
                     available_stock,
                     sold_quantity,
@@ -3756,6 +3921,7 @@ def add_product():
                 )
 
                 VALUES (
+                    ?,
                     ?,
                     ?,
                     ?,
@@ -3784,6 +3950,7 @@ def add_product():
                     description,
                     image_path,
                     price,
+                    unit,
                     original_stock,
                     original_stock,
                     manufacturing_date,
@@ -3821,7 +3988,8 @@ def add_product():
 
     return render_template(
         "add_product.html",
-        shop=shop
+        shop=shop,
+        categories=PRODUCT_CATEGORIES
     )
 
 
