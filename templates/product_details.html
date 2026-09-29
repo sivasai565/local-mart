@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="row g-4">
+    <div class="col-lg-5">
+      <img src="{{ url_for('static', filename=product.image) }}" alt="{{ product.name }}" class="img-fluid rounded-4 shadow-sm product-hero-image">
+    </div>
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm rounded-4 p-4">
+        <span class="badge bg-success-subtle text-success mb-2">{{ product.category }}</span>
+        <h2 class="fw-bold">{{ product.name }}</h2>
+        <p class="text-muted mb-3">Manufacturer: {{ product.manufacturer }} | Brand: {{ product.brand }}</p>
+        <h3 class="text-success fw-bold">{{ product.price | currency }}</h3>
+        <p class="text-dark mt-3">{{ product.description }}</p>
+        <ul class="product-meta mt-3">
+          <li>Shop: {{ product.shop_name }}</li>
+          <li>
+            {% if product.available_stock <= 0 %}
+              Stock: Out of Stock
+            {% elif product.available_stock <= product.low_stock_threshold %}
+              Stock: Low stock available
+            {% else %}
+              Stock: Available
+            {% endif %}
+          </li>
+          <li>Manufacturing Date: {{ product.manufacturing_date }}</li>
+          <li>Expiry Date: {{ product.expiry_date }}</li>
+          <li>Expected Delivery: {{ product.delivery_info }}</li>
+        </ul>
+        <div class="d-flex gap-3 mt-4">
+          <form method="post" action="{{ url_for('add_to_cart') }}">
+            <input type="hidden" name="product_id" value="{{ product.id }}">
+            <input type="hidden" name="quantity" value="1">
+            <button type="submit" class="btn btn-success btn-lg">Add to Cart</button>
+          </form>
+          <a href="{{ url_for('checkout_page') }}" class="btn btn-outline-success btn-lg">Buy Now</a>
+        </div>
+
+        {% if product.asorpay_qr_code %}
+          <div class="mt-4 border rounded-4 p-3 bg-light">
+            <h5 class="fw-bold mb-3">AsorPay QR</h5>
+            <div class="text-center">
+              <img src="{{ url_for('static', filename=product.asorpay_qr_code) }}" alt="AsorPay QR" class="img-fluid rounded-3 border" style="max-width: 220px;">
+            </div>
+            {% if product.asorpay_upi_id %}
+              <p class="text-muted small mt-3 mb-0">UPI ID: {{ product.asorpay_upi_id }}</p>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Checkout{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm rounded-4 p-4">
+        <h3 class="fw-bold mb-4">Confirm your order</h3>
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label">Delivery Address</label>
+            <textarea class="form-control" name="delivery_address" rows="3">{{ customer.address }}</textarea>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label">Village/Town</label><input class="form-control" type="text" name="village" value="{{ customer.village }}"></div>
+            <div class="col-md-6"><label class="form-label">PIN Code</label><input class="form-control" type="text" name="pin_code" value="{{ customer.pin_code }}"></div>
+          </div>
+          <button type="submit" class="btn btn-success mt-4">Confirm Order</button>
+        </form>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm rounded-4 p-4">
+        <h4 class="fw-bold mb-3">Order Summary</h4>
+        {% for item in items %}
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <strong>{{ item.product.name }}</strong><br>
+              <small>{{ item.quantity }} x {{ item.product.price | currency }}</small>
+            </div>
+            <span>{{ (item.product.price * item.quantity) | currency }}</span>
+          </div>
+        {% endfor %}
+        <hr>
+        <div class="d-flex justify-content-between"><span>Delivery Charge</span><span>{{ delivery_charge | currency }}</span></div>
+        <div class="d-flex justify-content-between fw-bold fs-5 mt-2"><span>Total</span><span>{{ total_with_delivery | currency }}</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

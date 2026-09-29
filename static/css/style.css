@@ -1,0 +1,158 @@
+:root {
+  --green-900: #136f3b;
+  --green-700: #1d8f4d;
+  --green-100: #eafaf0;
+  --muted: #6c757d;
+  --soft: #f5f7f8;
+}
+
+body {
+  background: linear-gradient(180deg, #f7faf7 0%, #eef7f2 100%);
+  color: #1d1d1f;
+  font-family: Arial, sans-serif;
+}
+
+.hero-section {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+}
+
+.feature-card,
+.auth-card,
+.product-card,
+.summary-card,
+.stat-card {
+  background: #fff;
+}
+
+.feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.85rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.feature-list i {
+  color: var(--green-700);
+  margin-right: 0.6rem;
+}
+
+.product-card {
+  transition: transform 0.2s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-2px);
+}
+
+.product-image,
+.cart-image,
+.table-product-image,
+.product-hero-image {
+  object-fit: cover;
+}
+
+.product-image {
+  height: 220px;
+  border-radius: 1.2rem 1.2rem 0 0;
+}
+
+.cart-image {
+  width: 100%;
+  height: 110px;
+}
+
+.table-product-image {
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
+}
+
+.product-hero-image {
+  width: 100%;
+  height: 480px;
+}
+
+.product-meta {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.dashboard-search {
+  background: rgba(255,255,255,0.9);
+}
+
+.search-icon {
+  font-size: 1.3rem;
+  color: var(--green-700);
+}
+
+.stat-card {
+  border-radius: 1rem;
+  padding: 1.2rem;
+  min-height: 120px;
+  box-shadow: 0 8px 20px rgba(8, 60, 25, 0.08);
+}
+
+.stat-card .label {
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.stat-card .value {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-top: 0.5rem;
+  color: var(--green-900);
+}
+
+.empty-state-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f2faf4 100%);
+}
+
+.empty-state-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: rgba(29, 143, 77, 0.08);
+  color: var(--green-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.btn-success {
+  background-color: var(--green-700);
+  border-color: var(--green-700);
+}
+
+.btn-success:hover,
+.btn-success:focus {
+  background-color: var(--green-900);
+  border-color: var(--green-900);
+}
+
+.btn-outline-success {
+  color: var(--green-700);
+  border-color: var(--green-700);
+}
+
+.btn-outline-success:hover {
+  background-color: var(--green-700);
+  border-color: var(--green-700);
+}
+
+.navbar-brand {
+  letter-spacing: 0.08em;
+}

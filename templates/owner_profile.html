@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}Shop Profile{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm rounded-4 p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+          <div>
+            <h3 class="fw-bold mb-1">Shop Profile</h3>
+            <p class="text-muted mb-0">Update your shop details and AsorPay payment settings</p>
+          </div>
+          <a href="{{ url_for('owner_dashboard') }}" class="btn btn-outline-success">Back to Dashboard</a>
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Shop Name</label>
+              <input type="text" class="form-control" name="shop_name" value="{{ shop.shop_name }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Owner Name</label>
+              <input type="text" class="form-control" name="owner_name" value="{{ shop.owner_name }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Mobile</label>
+              <input type="text" class="form-control" name="mobile" value="{{ shop.mobile or '' }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-control" value="{{ shop.email }}" disabled>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Village/Town</label>
+              <input type="text" class="form-control" name="village" value="{{ shop.village or '' }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">PIN Code</label>
+              <input type="text" class="form-control" name="pin_code" value="{{ shop.pin_code or '' }}" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Address</label>
+              <textarea class="form-control" name="address" rows="3" required>{{ shop.address or '' }}</textarea>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Delivery Radius (km)</label>
+              <input type="number" class="form-control" name="delivery_radius" value="{{ shop.delivery_radius or 5 }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Delivery Charge</label>
+              <input type="number" step="0.01" class="form-control" name="delivery_charge" value="{{ shop.delivery_charge or 20 }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Delivery Time</label>
+              <input type="text" class="form-control" name="delivery_time" value="{{ shop.delivery_time or 'Today, 5:00 PM - 7:00 PM' }}">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Delivery Areas</label>
+              <input type="text" class="form-control" name="available_delivery_areas" value="{{ shop.available_delivery_areas or 'Village and nearby town' }}">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">AsorPay UPI ID</label>
+              <input type="text" class="form-control" name="asorpay_upi_id" value="{{ shop.asorpay_upi_id or '' }}" placeholder="merchant@asorpay">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Upload AsorPay QR Code</label>
+              <input type="file" class="form-control" name="asorpay_qr_code_file" accept=".jpg,.jpeg,.png,.webp">
+            </div>
+            {% if shop.asorpay_qr_code %}
+            <div class="col-12 text-center">
+              <p class="small text-muted mb-2">Current QR Code</p>
+              <img src="{{ url_for('static', filename=shop.asorpay_qr_code) }}" alt="Current AsorPay QR" class="img-fluid rounded-3 border" style="max-width: 220px;">
+            </div>
+            {% endif %}
+          </div>
+
+          <button type="submit" class="btn btn-success btn-lg w-100 mt-4">Save Shop Profile</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

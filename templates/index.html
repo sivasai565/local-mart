@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}LocalMart | Home{% endblock %}
+{% block content %}
+<section class="hero-section">
+  <div class="container py-5">
+    <div class="row align-items-center g-4">
+      <div class="col-lg-7">
+        <span class="badge rounded-pill bg-light text-success fw-semibold px-3 py-2 mb-3">Village & Small-Town Marketplace</span>
+        <h1 class="display-4 fw-bold text-dark">LOCALMART</h1>
+        <p class="lead text-muted mb-4">“Your Local Shops, Now Online.”</p>
+        <p class="text-secondary">Shop from nearby kirana stores, vendors, and local businesses without depending on big delivery apps. Find products, order locally, and get quick doorstep delivery.</p>
+        <div class="d-flex flex-wrap gap-3 mt-4">
+          <a href="{{ url_for('owner_login') }}" class="btn btn-outline-success btn-lg px-4">Shop Owner Login</a>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="card shadow-lg border-0 rounded-4 p-4 feature-card">
+          <h4 class="fw-bold mb-3">Why LocalMart?</h4>
+          <ul class="feature-list">
+            <li><i class="fa-solid fa-store"></i> Nearby local shops</li>
+            <li><i class="fa-solid fa-box"></i> Real inventory tracking</li>
+            <li><i class="fa-solid fa-truck"></i> Local delivery support</li>
+            <li><i class="fa-solid fa-wallet"></i> COD & UPI payment flow</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

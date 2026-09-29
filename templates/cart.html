@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Shopping Cart{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <h2 class="fw-bold mb-4">Shopping Cart</h2>
+  {% if items %}
+    <div class="row g-4">
+      <div class="col-lg-8">
+        {% for item in items %}
+          {% set product = item.product %}
+          <div class="card border-0 shadow-sm rounded-4 mb-3">
+            <div class="row g-0 align-items-center p-3">
+              <div class="col-md-2">
+                <img src="{{ url_for('static', filename=product.image) }}" class="img-fluid rounded-3 cart-image" alt="{{ product.name }}">
+              </div>
+              <div class="col-md-4 px-3">
+                <h5 class="fw-bold">{{ product.name }}</h5>
+                <p class="mb-1 text-muted">{{ product.shop_name }}</p>
+                <p class="mb-0 text-success fw-semibold">{{ product.price | currency }}</p>
+              </div>
+              <div class="col-md-3">
+                <form method="post" action="{{ url_for('update_cart', product_id=product.id) }}" class="d-flex align-items-center gap-2">
+                  <button class="btn btn-outline-secondary btn-sm" type="submit" name="quantity" value="{{ item.quantity - 1 }}">-</button>
+                  <input type="number" class="form-control text-center" name="quantity" min="1" value="{{ item.quantity }}">
+                  <button class="btn btn-outline-secondary btn-sm" type="submit" name="quantity" value="{{ item.quantity + 1 }}">+</button>
+                </form>
+              </div>
+              <div class="col-md-2 text-end">
+                <p class="fw-bold mb-2">{{ (product.price * item.quantity) | currency }}</p>
+                <form method="post" action="{{ url_for('remove_from_cart', product_id=product.id) }}">
+                  <button class="btn btn-outline-danger btn-sm" type="submit">Remove</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-4 p-4 summary-card">
+          <h4 class="fw-bold mb-3">Order Summary</h4>
+          <div class="d-flex justify-content-between"><span>Total Products</span><span>{{ items|length }}</span></div>
+          <div class="d-flex justify-content-between"><span>Delivery Charge</span><span>₹20.00</span></div>
+          <hr>
+          <div class="d-flex justify-content-between fw-bold fs-5"><span>Total Amount</span><span>{{ total | currency }}</span></div>
+          <div class="d-grid gap-2 mt-4">
+            <a href="{{ url_for('customer_dashboard') }}" class="btn btn-outline-success">Continue Shopping</a>
+            <a href="{{ url_for('checkout_page') }}" class="btn btn-success">Proceed to Buy</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <div class="alert alert-info">Your cart is empty.</div>
+  {% endif %}
+</div>
+{% endblock %}

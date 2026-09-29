@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Customer Orders{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <h2 class="fw-bold mb-4">Customer Orders</h2>
+  {% if orders %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Customer</th>
+            <th>Mobile</th>
+            <th>Delivery Address</th>
+            <th>Product</th>
+            <th>Qty</th>
+            <th>Total</th>
+            <th>Payment</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in orders %}
+            <tr>
+              <td>{{ order.order_reference }}</td>
+              <td>{{ order.customer_name }}</td>
+              <td>{{ order.customer_mobile }}</td>
+              <td>{{ order.delivery_address }}</td>
+              <td>{{ order.product_name }}</td>
+              <td>{{ order.quantity }}</td>
+              <td>{{ order.amount | currency }}</td>
+              <td>{{ order.payment_method }} / {{ order.payment_status }}</td>
+              <td>{{ order.order_status }}</td>
+              <td>
+                <form method="post" action="{{ url_for('update_owner_order_status', order_reference=order.order_reference) }}">
+                  <select class="form-select form-select-sm" name="order_status">
+                    {% for status in ['Order Placed','Seller Confirmed','Preparing','Out for Delivery','Delivered'] %}
+                      <option value="{{ status }}" {% if order.order_status == status %}selected{% endif %}>{{ status }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="submit" class="btn btn-sm btn-success mt-2">Update</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="alert alert-info">No customer orders yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

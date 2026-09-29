@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Shop Owner Register{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+      <div class="card border-0 shadow-sm rounded-4 p-4 auth-card">
+        <h3 class="text-center fw-bold mb-4">Shop Owner Registration</h3>
+        <form method="post">
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label">Shop Name</label><input type="text" class="form-control" name="shop_name" required></div>
+            <div class="col-md-6"><label class="form-label">Owner Name</label><input type="text" class="form-control" name="owner_name" required></div>
+            <div class="col-md-6"><label class="form-label">Email</label><input type="email" class="form-control" name="email" required></div>
+            <div class="col-md-6"><label class="form-label">Mobile Number</label><input type="text" class="form-control" name="mobile" required></div>
+            <div class="col-md-6"><label class="form-label">Village/Town</label><input type="text" class="form-control" name="village" required></div>
+            <div class="col-md-6"><label class="form-label">PIN Code</label><input type="text" class="form-control" name="pin_code" required></div>
+            <div class="col-12"><label class="form-label">Address</label><textarea class="form-control" name="address" rows="3" required></textarea></div>
+            <div class="col-md-6"><label class="form-label">Password</label><input type="password" class="form-control" name="password" required></div>
+            <div class="col-md-6"><label class="form-label">Confirm Password</label><input type="password" class="form-control" name="confirm_password" required></div>
+          </div>
+          <button type="submit" class="btn btn-success w-100 mt-4">Register as Shop Owner</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

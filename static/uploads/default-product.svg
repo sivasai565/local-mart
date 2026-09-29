@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#f2f5f7"/>
+  <rect x="150" y="90" width="500" height="420" rx="28" fill="#dfeaf3"/>
+  <circle cx="400" cy="220" r="110" fill="#a7c7e7"/>
+  <rect x="270" y="320" width="260" height="90" rx="24" fill="#7aa8d8"/>
+  <text x="400" y="540" text-anchor="middle" fill="#315d87" font-size="36" font-family="Arial, sans-serif">LocalMart</text>
+</svg>

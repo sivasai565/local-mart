@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Payment{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm rounded-4 p-4">
+        <h3 class="fw-bold mb-4">Payment Dashboard</h3>
+        <div class="mb-4">
+          <h5>Order Summary</h5>
+          {% for row in rows %}
+            <div class="d-flex justify-content-between small text-muted mb-2">
+              <span>{{ row.product_name }} ({{ row.quantity }})</span>
+              <span>{{ row.amount | currency }}</span>
+            </div>
+          {% endfor %}
+          <hr>
+          <div class="d-flex justify-content-between fw-bold"><span>Total</span><span>{{ total_amount | currency }}</span></div>
+        </div>
+
+        <form method="post" action="{{ url_for('process_payment', order_reference=order_reference) }}">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Payment Options</label>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="payment_method" id="cod" value="COD" checked>
+              <label class="form-check-label" for="cod">Cash on Delivery</label>
+            </div>
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="radio" name="payment_method" id="asorpay" value="ASORPAY">
+              <label class="form-check-label" for="asorpay">Pay using AsorPay</label>
+            </div>
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="radio" name="payment_method" id="upi" value="UPI">
+              <label class="form-check-label" for="upi">Pay using UPI</label>
+            </div>
+          </div>
+
+          <div id="upi-fields" class="mb-3" style="display:none;">
+            <label class="form-label">UPI ID</label>
+            <input type="text" class="form-control" name="upi_id" placeholder="example@upi">
+            <label class="form-label mt-3">Transaction ID</label>
+            <input type="text" class="form-control" name="transaction_id" placeholder="UPI-XXXXXXXXXX">
+          </div>
+
+          <div id="asorpay-fields" class="mb-3" style="display:none;">
+            <label class="form-label">AsorPay UPI ID</label>
+            <input type="text" class="form-control" name="asorpay_upi_id" value="{{ rows[0].asorpay_upi_id or '' }}" placeholder="merchant@asorpay">
+            <label class="form-label mt-3">Transaction ID</label>
+            <input type="text" class="form-control" name="transaction_id" placeholder="ASORPAY-XXXXXXXXXX">
+            {% if rows[0].asorpay_qr_code %}
+              <div class="mt-3 text-center">
+                <p class="small text-muted mb-2">Scan QR to pay</p>
+                <img src="{{ url_for('static', filename=rows[0].asorpay_qr_code) }}" alt="AsorPay QR" class="img-fluid rounded-3 border" style="max-width: 220px;">
+              </div>
+            {% endif %}
+          </div>
+
+          <button type="submit" id="payment-button" class="btn btn-success btn-lg w-100">Place Order</button>
+        </form>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+        <h4 class="fw-bold mb-3">Payment Instructions</h4>
+        <p class="text-muted">Cash on Delivery: Pay the delivery amount in cash when your order arrives.</p>
+        <p class="text-muted">AsorPay: Use the merchant QR code or UPI ID shown on the left panel for fast digital payment.</p>
+        <p class="text-muted">UPI: For real transactions, connect a legitimate payment gateway in the .env config and verify the payment status on the backend before marking as paid.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  const paymentInputs = document.querySelectorAll('input[name="payment_method"]');
+  const upiFields = document.getElementById('upi-fields');
+  const asorpayFields = document.getElementById('asorpay-fields');
+  const paymentButton = document.getElementById('payment-button');
+
+  function togglePaymentFields() {
+    const selected = document.querySelector('input[name="payment_method"]:checked')?.value;
+    upiFields.style.display = (selected === 'UPI') ? 'block' : 'none';
+    asorpayFields.style.display = (selected === 'ASORPAY') ? 'block' : 'none';
+    paymentButton.textContent = selected === 'COD' ? 'Place COD Order' : selected === 'ASORPAY' ? 'Pay via AsorPay' : 'Pay via UPI';
+  }
+
+  paymentInputs.forEach((input) => {
+    input.addEventListener('change', togglePaymentFields);
+  });
+
+  togglePaymentFields();
+</script>
+{% endblock %}

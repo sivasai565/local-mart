@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}My Profile{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="card border-0 shadow-sm rounded-4 p-4">
+    <h3 class="fw-bold mb-4">Customer Profile</h3>
+    <div class="row g-3">
+      <div class="col-md-6"><strong>Name:</strong> {{ user.name }}</div>
+      <div class="col-md-6"><strong>Email:</strong> {{ user.email }}</div>
+      <div class="col-md-6"><strong>Mobile Number:</strong> {{ user.mobile }}</div>
+      <div class="col-md-6"><strong>Village/Town:</strong> {{ user.village }}</div>
+      <div class="col-12"><strong>Address:</strong> {{ user.address }}</div>
+      <div class="col-md-6"><strong>PIN Code:</strong> {{ user.pin_code }}</div>
+    </div>
+    <div class="mt-4 d-flex flex-wrap gap-2">
+      <button class="btn btn-outline-success">Edit Profile</button>
+      <button class="btn btn-outline-success">Change Password</button>
+      <a href="{{ url_for('customer_orders') }}" class="btn btn-outline-success">My Orders</a>
+      <button class="btn btn-outline-success">Saved Addresses</button>
+      <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
