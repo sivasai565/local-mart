@@ -2,12 +2,17 @@ import os
 import re
 import smtplib
 import sqlite3
+import threading
 import uuid
+import logging
 from datetime import datetime
 from email.message import EmailMessage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from urllib import parse as urllib_parse
 from urllib import request as urllib_request
 
+from dotenv import load_dotenv
 from flask import (
     Flask,
     flash,
@@ -21,6 +26,10 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
+load_dotenv()
+
+logger = logging.getLogger(__name__)
+
 
 # ============================================================
 # FLASK CONFIGURATION
@@ -33,11 +42,31 @@ app.config["SECRET_KEY"] = os.getenv(
     "localmart-dev-secret-key"
 )
 
+frontend_origin = os.getenv("FRONTEND_ORIGIN")
+if frontend_origin:
+    app.config["SESSION_COOKIE_SAMESITE"] = "None"
+    app.config["SESSION_COOKIE_SECURE"] = True
+
 app.config["UPLOAD_FOLDER"] = os.path.join(
     app.root_path,
     "static",
     "uploads"
 )
+
+
+@app.after_request
+def add_api_cors_headers(response):
+    if (
+        frontend_origin
+        and request.path.startswith("/api/")
+        and request.headers.get("Origin") == frontend_origin
+    ):
+        response.headers["Access-Control-Allow-Origin"] = frontend_origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Vary"] = "Origin"
+    return response
 
 PRODUCT_CATEGORIES = [
     "Milk",
@@ -83,11 +112,12 @@ os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 # DATABASE CONFIGURATION
 # ============================================================
 
-DB_PATH = os.path.join(
-    app.root_path,
-    "database",
-    "localmart.db"
+DB_PATH = os.getenv(
+    "DATABASE_PATH",
+    os.path.join(app.root_path, "database", "localmart.db")
 )
+if not os.path.isabs(DB_PATH):
+    DB_PATH = os.path.join(app.root_path, DB_PATH)
 
 os.makedirs(
     os.path.dirname(DB_PATH),
@@ -273,6 +303,7 @@ def init_db():
 
     ensure_shop_payment_columns()
     ensure_product_unit_column()
+    ensure_order_payment_columns()
     seed_demo_data()
 
 
@@ -289,6 +320,27 @@ def ensure_product_unit_column():
             "ALTER TABLE products ADD COLUMN unit TEXT NOT NULL DEFAULT 'piece'"
         )
 
+    conn.commit()
+    conn.close()
+
+
+def ensure_order_payment_columns():
+    """Add payment confirmation storage without replacing existing orders."""
+
+    conn = get_db()
+    columns = conn.execute("PRAGMA table_info(orders)").fetchall()
+    existing = {column[1] for column in columns}
+
+    if "utr_number" not in existing:
+        conn.execute("ALTER TABLE orders ADD COLUMN utr_number TEXT")
+
+    conn.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_utr_number
+        ON orders(utr_number)
+        WHERE utr_number IS NOT NULL
+        """
+    )
     conn.commit()
     conn.close()
 
@@ -668,6 +720,50 @@ def send_order_email(subject, body, recipient_email):
     except Exception as error:
         print(f"Email error for {recipient_email}: {error}")
         return False
+
+
+def send_utr_confirmation_email(owner_email, owner_name, utr_number):
+    """Send UTR notification independently of the committed order transaction."""
+
+    system_email = os.getenv("SYSTEM_EMAIL")
+    system_password = os.getenv("SYSTEM_PASSWORD")
+
+    if not system_email or not system_password:
+        logger.warning("SYSTEM_EMAIL or SYSTEM_PASSWORD is not configured; UTR email skipped.")
+        return
+
+    try:
+        message = MIMEMultipart()
+        message["Subject"] = "New Order Received!"
+        message["From"] = system_email
+        message["To"] = owner_email
+        message.attach(
+            MIMEText(
+                "New Order Received!\n\n"
+                f"Hello {owner_name},\n\n"
+                "Someone just purchased your product.\n\n"
+                "Customer UTR Number for verification:\n"
+                f"{utr_number}\n\n"
+                "Please check your bank statement to approve.\n\n"
+                "Thank you.",
+                "plain",
+            )
+        )
+
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as server:
+            server.starttls()
+            server.login(system_email, system_password)
+            server.sendmail(system_email, owner_email, message.as_string())
+    except Exception:
+        logger.exception("Could not send UTR notification email to %s", owner_email)
+
+
+def queue_utr_confirmation_email(owner_email, owner_name, utr_number):
+    threading.Thread(
+        target=send_utr_confirmation_email,
+        args=(owner_email, owner_name, utr_number),
+        daemon=True,
+    ).start()
 
 
 def send_order_notifications(order_reference, customer, shop, rows):
@@ -2523,6 +2619,118 @@ def payment_page(order_reference):
         customer=customer,
         order_reference=order_reference
     )
+
+
+@app.get("/api/checkout/<order_reference>")
+def checkout_api(order_reference):
+    """Return server-owned payment details for the current customer's order."""
+
+    if not ensure_logged_in("customer"):
+        return {"success": False, "message": "Customer login required."}, 401
+
+    conn = get_db()
+    try:
+        row = conn.execute(
+            """
+            SELECT o.id AS order_id, o.product_id, o.order_reference,
+                   p.name AS product_name, p.price,
+                   s.owner_name, s.asorpay_upi_id
+            FROM orders o
+            INNER JOIN products p ON p.id = o.product_id
+            INNER JOIN shops s ON s.id = o.shop_id
+            WHERE o.order_reference = ? AND o.customer_id = ?
+            ORDER BY o.id ASC
+            LIMIT 1
+            """,
+            (order_reference, session["user_id"]),
+        ).fetchone()
+    except sqlite3.Error:
+        logger.exception("Checkout lookup failed for %s", order_reference)
+        return {"success": False, "message": "Could not load checkout details."}, 500
+    finally:
+        conn.close()
+
+    if not row:
+        return {"success": False, "message": "Order not found."}, 404
+    if not row["asorpay_upi_id"]:
+        return {"success": False, "message": "The owner has not configured a UPI ID."}, 422
+
+    return {
+        "success": True,
+        "order": {
+            "orderId": row["order_id"],
+            "orderReference": row["order_reference"],
+            "productId": row["product_id"],
+            "productName": row["product_name"],
+            "price": float(row["price"]),
+            "ownerName": row["owner_name"],
+            "upiId": row["asorpay_upi_id"],
+        },
+    }
+
+
+@app.post("/api/orders/confirm")
+def confirm_order_api():
+    if not ensure_logged_in("customer"):
+        return {"success": False, "message": "Customer login required."}, 401
+
+    payload = request.get_json(silent=True) or {}
+    order_id = payload.get("orderId")
+    utr_number = str(payload.get("utrNumber", "")).strip()
+
+    try:
+        order_id = int(order_id)
+    except (TypeError, ValueError):
+        return {"success": False, "message": "A valid orderId is required."}, 400
+
+    if not re.fullmatch(r"\d{12}", utr_number):
+        return {"success": False, "message": "UTR must contain exactly 12 digits."}, 400
+
+    conn = get_db()
+    try:
+        order = conn.execute(
+            """
+            SELECT o.id, o.utr_number, o.payment_status,
+                   s.owner_name, s.email AS owner_email
+            FROM orders o
+            INNER JOIN shops s ON s.id = o.shop_id
+            WHERE o.id = ? AND o.customer_id = ?
+            """,
+            (order_id, session["user_id"]),
+        ).fetchone()
+
+        if not order:
+            return {"success": False, "message": "Order not found."}, 404
+        if order["utr_number"] or order["payment_status"] == "PAYMENT_SUBMITTED":
+            return {"success": False, "message": "A UTR has already been submitted for this order."}, 409
+
+        conn.execute(
+            """
+            UPDATE orders
+            SET utr_number = ?, payment_method = 'UPI',
+                payment_status = 'PAYMENT_SUBMITTED',
+                order_status = 'Payment Verification Pending'
+            WHERE id = ?
+            """,
+            (utr_number, order_id),
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.rollback()
+        return {"success": False, "message": "This UTR has already been submitted."}, 409
+    except sqlite3.Error:
+        conn.rollback()
+        logger.exception("Order confirmation failed for order %s", order_id)
+        return {"success": False, "message": "Could not save the order confirmation."}, 500
+    finally:
+        conn.close()
+
+    queue_utr_confirmation_email(order["owner_email"], order["owner_name"], utr_number)
+    return {
+        "success": True,
+        "message": "Order confirmed successfully. The owner must verify the UTR against their bank statement.",
+        "orderId": order_id,
+    }
 
 
 @app.route(

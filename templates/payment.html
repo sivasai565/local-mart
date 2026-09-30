@@ -71,6 +71,16 @@
 
           <button type="submit" id="payment-button" class="btn btn-success btn-lg w-100">Place Order</button>
         </form>
+
+        <section id="upi-confirmation" class="border-top mt-4 pt-4" hidden>
+          <h4 class="fw-bold mb-3">Complete Payment</h4>
+          <button type="button" id="upi-app-button" class="btn btn-outline-success btn-lg w-100" disabled>Pay via UPI App</button>
+          <p class="small text-muted mt-3">After making the payment inside PhonePe/GPay, return to this page to enter your 12-digit UTR receipt number to confirm your order.</p>
+          <label class="form-label" for="utr-number">Enter 12-digit UPI UTR Number</label>
+          <input id="utr-number" class="form-control" type="text" inputmode="numeric" maxlength="12" pattern="[0-9]{12}" autocomplete="off">
+          <button type="button" id="confirm-order-button" class="btn btn-success w-100 mt-3" disabled>Submit &amp; Confirm Order</button>
+          <div id="upi-status" class="small mt-3" role="status" aria-live="polite"></div>
+        </section>
       </div>
     </div>
     <div class="col-lg-5">
@@ -88,6 +98,74 @@
   const upiFields = document.getElementById('upi-fields');
   const asorpayFields = document.getElementById('asorpay-fields');
   const paymentButton = document.getElementById('payment-button');
+  const upiConfirmation = document.getElementById('upi-confirmation');
+  const upiAppButton = document.getElementById('upi-app-button');
+  const utrInput = document.getElementById('utr-number');
+  const confirmOrderButton = document.getElementById('confirm-order-button');
+  const upiStatus = document.getElementById('upi-status');
+  let checkoutData = null;
+
+  function redirectToUPI(upiId, ownerName, price, orderId) {
+    if (!upiId || !ownerName || !Number.isFinite(Number(price)) || Number(price) <= 0 || !orderId) {
+      upiStatus.textContent = 'UPI payment details are unavailable.';
+      upiStatus.className = 'small mt-3 text-danger';
+      return;
+    }
+    const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(ownerName)}&am=${encodeURIComponent(Number(price).toFixed(2))}&cu=INR&tn=${encodeURIComponent(orderId)}`;
+    window.location.href = upiUrl;
+  }
+
+  async function loadCheckoutData() {
+    try {
+      const response = await fetch('{{ url_for("checkout_api", order_reference=order_reference) }}', { credentials: 'same-origin' });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || 'Could not load UPI details.');
+      checkoutData = result.order;
+      upiConfirmation.hidden = false;
+      upiAppButton.disabled = false;
+      confirmOrderButton.disabled = false;
+    } catch (error) {
+      upiStatus.textContent = error.message;
+      upiStatus.className = 'small mt-3 text-danger';
+    }
+  }
+
+  upiAppButton.addEventListener('click', () => {
+    if (checkoutData) redirectToUPI(checkoutData.upiId, checkoutData.ownerName, checkoutData.price, checkoutData.orderId);
+  });
+
+  utrInput.addEventListener('input', () => {
+    utrInput.value = utrInput.value.replace(/\D/g, '').slice(0, 12);
+  });
+
+  confirmOrderButton.addEventListener('click', async () => {
+    const utrNumber = utrInput.value;
+    if (!/^\d{12}$/.test(utrNumber) || !checkoutData) {
+      upiStatus.textContent = 'Enter exactly 12 digits for the UTR number.';
+      upiStatus.className = 'small mt-3 text-danger';
+      return;
+    }
+    confirmOrderButton.disabled = true;
+    confirmOrderButton.textContent = 'Submitting...';
+    try {
+      const response = await fetch('{{ url_for("confirm_order_api") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ orderId: checkoutData.orderId, utrNumber })
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || 'Could not confirm the order.');
+      upiStatus.textContent = 'Order confirmed. The owner must verify the UTR against their bank statement.';
+      upiStatus.className = 'small mt-3 text-success';
+    } catch (error) {
+      upiStatus.textContent = error.message;
+      upiStatus.className = 'small mt-3 text-danger';
+      confirmOrderButton.disabled = false;
+    } finally {
+      if (confirmOrderButton.disabled) confirmOrderButton.textContent = 'Submitted';
+    }
+  });
 
   function togglePaymentFields() {
     const selected = document.querySelector('input[name="payment_method"]:checked')?.value;
@@ -101,5 +179,6 @@
   });
 
   togglePaymentFields();
+  loadCheckoutData();
 </script>
 {% endblock %}

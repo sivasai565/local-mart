@@ -132,6 +132,22 @@ Purchase a product from the customer dashboard. The app reduces available stock 
 
 The code supports UPI verification using a configured gateway endpoint in `.env`.
 
+For UPI app payments and owner UTR notifications, configure these values in the
+deployment environment. `SYSTEM_PASSWORD` must be a Gmail App Password, not the
+normal Gmail password:
+
+```env
+SYSTEM_EMAIL=your-email@gmail.com
+SYSTEM_PASSWORD=your-gmail-app-password
+```
+
+The frontend uses same-origin API URLs, so no Gmail credential is sent to the browser.
+Submitting a UTR records it as `PAYMENT_SUBMITTED`; it is only a customer-provided
+reference and must be checked against the owner's bank statement.
+
+If the frontend is hosted separately, set `FRONTEND_ORIGIN` to its exact HTTPS origin.
+The API then allows only that origin and enables secure session cookies.
+
 Example:
 
 ```env
@@ -148,6 +164,12 @@ To deploy online:
 2. Set environment variables securely.
 3. Use a production WSGI server such as Gunicorn.
 4. Run the application with a proper reverse proxy and HTTPS.
+
+SQLite data is stored in `database/localmart.db` by default and is not reset when
+the app starts. The `users`, `shops`, `products`, `orders`, and `payments` rows are
+kept across restarts. On a hosting provider with ephemeral storage, set
+`DATABASE_PATH` to a mounted persistent-disk path or use a managed database such as
+PostgreSQL; otherwise the provider can discard the SQLite file during redeploys.
 
 Example:
 
